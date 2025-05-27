@@ -1,8 +1,6 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
 using System.Windows.Forms;
+using MehmetBirolGolge_231502010.Forms;
 
 namespace MehmetBirolGolge_231502010
 {
@@ -16,7 +14,9 @@ namespace MehmetBirolGolge_231502010
 		{
 			Application.EnableVisualStyles();
 			Application.SetCompatibleTextRenderingDefault(false);
-			Application.Run(new Form1());
+
+			// LoginForm ile başla
+			Application.Run(new LoginForm());
 		}
 	}
 }
