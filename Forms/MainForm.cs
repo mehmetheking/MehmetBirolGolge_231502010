@@ -39,6 +39,7 @@ namespace MehmetBirolGolge_231502010.Forms
 		public MainForm(User user)
 		{
 			currentUser = user;
+			aiService = new OpenAIService();
 			reportService = new ReportService();
 			InitializeComponent();
 			InitializeCustomComponents();

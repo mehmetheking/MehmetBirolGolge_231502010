@@ -1,42 +1,58 @@
 ﻿using System;
+using System.Configuration;
 using System.Threading.Tasks;
-using OpenAI_API;
-using OpenAI_API.Completions;
-using OpenAI_API.Models;
-using static OpenAI.ObjectModels.Models;
+using RestSharp;
+using Newtonsoft.Json;
 
 namespace MehmetBirolGolge_231502010.Services
 {
 	public class OpenAIService
 	{
-		private readonly OpenAIAPI api;
+		private readonly string apiKey;
+		private readonly RestClient client;
 
 		public OpenAIService()
 		{
-			// API anahtarını buraya yapıştır
-			// OpenAI.com'dan alacağın API key'i buraya yaz
-			string apiKey = "sk-..."; // BURAYA API KEY'İNİ YAPIŞTIR
+			apiKey = ConfigurationManager.AppSettings["OpenAI_API_Key"];
 
-			api = new OpenAIAPI(apiKey);
+			if (string.IsNullOrEmpty(apiKey) || apiKey == "sk-...")
+			{
+				throw new Exception("Lütfen App.config dosyasına geçerli bir OpenAI API anahtarı ekleyin!");
+			}
+
+			client = new RestClient("https://api.openai.com/v1/");
 		}
 
 		public async Task<string> GenerateTaskDescription(string taskTitle)
 		{
 			try
 			{
-				var prompt = $"'{taskTitle}' başlıklı görev için detaylı bir açıklama oluştur. " +
-						   "Açıklama, görevi nasıl tamamlayacağımı adım adım içersin. " +
-						   "Maksimum 3-4 cümle olsun. Türkçe yaz.";
+				var request = new RestRequest("chat/completions", Method.POST);
+				request.AddHeader("Authorization", $"Bearer {apiKey}");
+				request.AddHeader("Content-Type", "application/json");
 
-				var result = await api.Completions.CreateCompletionAsync(new CompletionRequest
+				var body = new
 				{
-					Prompt = prompt,
-					Model = Model.Davinci3,
-					MaxTokens = 150,
-					Temperature = 0.7
-				});
+					model = "gpt-3.5-turbo",
+					messages = new[]
+					{
+						new { role = "system", content = "Sen yardımcı bir asistansın. Görev açıklamaları oluşturuyorsun." },
+						new { role = "user", content = $"'{taskTitle}' başlıklı görev için detaylı bir açıklama oluştur. Açıklama, görevi nasıl tamamlayacağımı adım adım içersin. Maksimum 3-4 cümle olsun." }
+					},
+					temperature = 0.7
+				};
 
-				return result.Completions[0].Text.Trim();
+				request.AddJsonBody(body);
+
+				var response = await client.ExecuteTaskAsync(request);
+
+				if (response.IsSuccessful)
+				{
+					dynamic result = JsonConvert.DeserializeObject(response.Content);
+					return result.choices[0].message.content;
+				}
+
+				return "AI açıklama oluşturulamadı.";
 			}
 			catch (Exception ex)
 			{
@@ -48,48 +64,75 @@ namespace MehmetBirolGolge_231502010.Services
 		{
 			try
 			{
-				var prompt = $"Görev: {taskTitle}\nAçıklama: {description}\n\n" +
-						   "Bu görevin öncelik seviyesini belirle. " +
-						   "Sadece şu kelimelerden birini yaz: Düşük, Orta veya Yüksek";
+				var request = new RestRequest("chat/completions", Method.POST);
+				request.AddHeader("Authorization", $"Bearer {apiKey}");
+				request.AddHeader("Content-Type", "application/json");
 
-				var result = await api.Completions.CreateCompletionAsync(new CompletionRequest
+				var body = new
 				{
-					Prompt = prompt,
-					Model = Model.Davinci3,
-					MaxTokens = 10,
-					Temperature = 0.3
-				});
+					model = "gpt-3.5-turbo",
+					messages = new[]
+					{
+						new { role = "system", content = "Görev öncelik seviyesi belirleyen bir asistansın. Sadece 'Düşük', 'Orta' veya 'Yüksek' cevap ver." },
+						new { role = "user", content = $"Görev: {taskTitle}\nAçıklama: {description}\n\nBu görevin öncelik seviyesi nedir?" }
+					},
+					temperature = 0.3,
+					max_tokens = 10
+				};
 
-				string priority = result.Completions[0].Text.Trim();
+				request.AddJsonBody(body);
 
-				// Geçerli değerlerden biri mi kontrol et
-				if (priority.Contains("Yüksek")) return "Yüksek";
-				if (priority.Contains("Düşük")) return "Düşük";
+				var response = await client.ExecuteTaskAsync(request);
+
+				if (response.IsSuccessful)
+				{
+					dynamic result = JsonConvert.DeserializeObject(response.Content);
+					string priority = result.choices[0].message.content.ToString().Trim();
+
+					if (priority.Contains("Yüksek")) return "Yüksek";
+					if (priority.Contains("Düşük")) return "Düşük";
+					return "Orta";
+				}
+
 				return "Orta";
 			}
 			catch
 			{
-				return "Orta"; // Hata durumunda varsayılan
+				return "Orta";
 			}
 		}
 
-		// Bonus: Görev önerisi oluşturma
 		public async Task<string> SuggestRelatedTasks(string taskTitle)
 		{
 			try
 			{
-				var prompt = $"'{taskTitle}' görevi ile ilgili yapılması gereken 3 alt görev öner. " +
-						   "Her birini yeni satırda listele. Kısa ve net ol.";
+				var request = new RestRequest("chat/completions", Method.POST);
+				request.AddHeader("Authorization", $"Bearer {apiKey}");
+				request.AddHeader("Content-Type", "application/json");
 
-				var result = await api.Completions.CreateCompletionAsync(new CompletionRequest
+				var body = new
 				{
-					Prompt = prompt,
-					Model = Model.Davinci3,
-					MaxTokens = 100,
-					Temperature = 0.8
-				});
+					model = "gpt-3.5-turbo",
+					messages = new[]
+					{
+						new { role = "system", content = "Görev planlama asistanısın. İlgili alt görevler öneriyorsun." },
+						new { role = "user", content = $"'{taskTitle}' görevi ile ilgili yapılması gereken 3 alt görev öner. Her birini yeni satırda listele." }
+					},
+					temperature = 0.8,
+					max_tokens = 150
+				};
 
-				return result.Completions[0].Text.Trim();
+				request.AddJsonBody(body);
+
+				var response = await client.ExecuteTaskAsync(request);
+
+				if (response.IsSuccessful)
+				{
+					dynamic result = JsonConvert.DeserializeObject(response.Content);
+					return result.choices[0].message.content;
+				}
+
+				return "İlgili görev önerisi oluşturulamadı.";
 			}
 			catch
 			{
