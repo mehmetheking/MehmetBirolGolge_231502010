@@ -1,12 +1,13 @@
-﻿using System;
+﻿using MehmetBirolGolge_231502010.Data;
+using MehmetBirolGolge_231502010.Models;
+using OfficeOpenXml;
+using OfficeOpenXml.Style;
+using System;
+using System.ComponentModel;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Windows.Forms;
-using OfficeOpenXml;
-using OfficeOpenXml.Style;
-using MehmetBirolGolge_231502010.Data;
-using MehmetBirolGolge_231502010.Models;
-using System.Drawing;
 
 namespace MehmetBirolGolge_231502010.Services
 {
@@ -25,8 +26,8 @@ namespace MehmetBirolGolge_231502010.Services
 						.OrderByDescending(t => t.CreatedDate)
 						.ToList();
 
-					// Excel paketi oluştur
-					ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+					// En güncel kullanım
+					OfficeOpenXml.ExcelPackage.LicenseContext = OfficeOpenXml.LicenseContext.NonCommercial;
 					using (var package = new ExcelPackage())
 					{
 						// Worksheet oluştur
