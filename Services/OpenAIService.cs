@@ -10,14 +10,22 @@ namespace MehmetBirolGolge_231502010.Services
 	{
 		private readonly string apiKey;
 		private readonly RestClient client;
+		string openAiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 
 		public OpenAIService()
 		{
-			apiKey = ConfigurationManager.AppSettings["OpenAI_API_Key"];
+			// Önce Environment Variable'dan dene
+			apiKey = Environment.GetEnvironmentVariable("OPENAI_API_KEY");
 
-			if (string.IsNullOrEmpty(apiKey) || apiKey == "sk-...")
+			// Yoksa App.config'den al
+			if (string.IsNullOrEmpty(apiKey))
 			{
-				throw new Exception("Lütfen App.config dosyasına geçerli bir OpenAI API anahtarı ekleyin!");
+				apiKey = ConfigurationManager.AppSettings["OpenAI_API_Key"];
+			}
+
+			if (string.IsNullOrEmpty(apiKey) || apiKey == "YOUR_API_KEY_HERE")
+			{
+				throw new Exception("OpenAI API anahtarı bulunamadı! Lütfen Environment Variable veya App.config'e ekleyin.");
 			}
 
 			client = new RestClient("https://api.openai.com/v1/");
@@ -51,8 +59,11 @@ namespace MehmetBirolGolge_231502010.Services
 					dynamic result = JsonConvert.DeserializeObject(response.Content);
 					return result.choices[0].message.content;
 				}
-
-				return "AI açıklama oluşturulamadı.";
+				else
+				{
+					// Hata detayını görelim
+					return $"AI Hatası: {response.StatusCode} - {response.Content}";
+				}
 			}
 			catch (Exception ex)
 			{
