@@ -33,13 +33,12 @@ namespace MehmetBirolGolge_231502010.Forms
 		private Label lblDueDate;
 		private TextBox txtAIDescription;
 		private Label lblAIDescription;
-		private DeepSeekService aiService;
+		private OpenAIService aiService;
 		private ReportService reportService;
 
 		public MainForm(User user)
 		{
 			currentUser = user;
-			aiService = new DeepSeekService();
 			reportService = new ReportService();
 			InitializeComponent();
 			InitializeCustomComponents();
